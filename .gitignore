@@ -105,3 +105,11 @@ venv.bak/
 
 # flask session files
 flask_session/
+
+
+# PDF files
+temp_indices/
+
+# Allow vendored Python dependencies for Azure App Service
+!.python_packages/
+!.python_packages/**
