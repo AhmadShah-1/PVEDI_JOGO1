@@ -22,7 +22,23 @@ auth = Auth(
 )
 
 @app.route("/")
-@auth.login_required
+def index(*, context=None): # Add =None
+    # Create a fake user object for testing
+    mock_context = {
+        'user': {'name': 'Test User', 'preferred_username': 'test@example.com'}
+    }
+    return render_template(
+        'index.html',
+        user=mock_context['user'],
+        edit_profile_url="#",
+        api_endpoint=os.getenv("ENDPOINT"),
+        title=f"Flask Web App Sample v{__version__}",
+    )
+    
+'''
+Commented out for testing purposes
+
+@auth.login_required        
 def index(*, context):
     return render_template(
         'index.html',
@@ -31,6 +47,10 @@ def index(*, context):
         api_endpoint=os.getenv("ENDPOINT"),
         title=f"Flask Web App Sample v{__version__}",
     )
+'''
+
+
+
 
 @app.route("/call_api")
 @auth.login_required(scopes=os.getenv("SCOPE", "").split())
