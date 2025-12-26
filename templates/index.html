@@ -32,16 +32,11 @@
       <span>JOGO RAG</span>
     </div>
 
-    {% if current_user %}
+    {% if user %}
       <div style="margin: 10px 0 18px 0; font-size: 0.9rem; color: #cfcfcf;">
         <div style="opacity: 0.9;">Signed in as</div>
         <div style="font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          {{ current_user.email }}
-        </div>
-        <div style="margin-top: 8px;">
-          <a href="{{ url_for('auth.logout') }}" style="color: var(--accent-color); text-decoration: none; font-weight: bold;">
-            Sign out
-          </a>
+          {{ user.get('name') }}
         </div>
       </div>
     {% endif %}
@@ -49,9 +44,7 @@
     <label for="category">Code Type</label>
     <select id="category">
       <option value="" selected disabled>Select...</option>
-      {% for cat in categories %}
-        <option value="{{ cat }}">{{ cat }}</option>
-      {% endfor %}
+      <!-- Populated by JS -->
     </select>
 
     <label for="year">Year</label>
@@ -98,152 +91,150 @@
 
         <!-- Thought Bubble Section (Bottom 75%) -->
         <div class="thought-bubble-panel">
-            <div class="tb-toolbar">
-                <span style="margin-right: auto; font-weight: bold; padding-left: 10px; align-self: center;">Thought Bubble</span>
-                <button id="tb-download">Download PNG</button>
-                <button id="tb-clear">Clear Canvas</button>
+          <div class="tb-header">
+            <span>Domain Expansion</span>
+            <div class="tb-tools">
+                <button id="tb-select" title="Select Tool">👆</button>
+                <button id="tb-draw" title="Draw">✏️</button>
+                <input type="color" id="tb-draw-color" value="#000000" title="Brush Color">
+                
+                <div class="divider"></div>
+                
+                <button id="tb-text" title="Add Text">T</button>
+                <input type="color" id="tb-text-color" value="#000000" title="Text Color">
+                
+                <button id="tb-rect" title="Add Rectangle">⬜</button>
+                <input type="color" id="tb-rect-color" value="#ffff00" title="Rect Color">
+                
+                <button id="tb-circle" title="Add Circle">⚪</button>
+                <input type="color" id="tb-circle-color" value="#000000" title="Circle Stroke Color">
+
+                <button id="tb-note" title="Add Sticky Note">📝</button>
+
+                <div class="divider"></div>
+                <button id="tb-clear" title="Clear Canvas">🗑️</button>
+                <button id="tb-download" title="Download PNG">💾</button>
+                <button id="de-download" title="Export PDF">📄</button>
             </div>
-            <div class="canvas-container" id="canvas-container">
-                <canvas id="thought-bubble-canvas"></canvas>
-            </div>
+          </div>
+          <div class="tb-canvas-container" id="canvas-container">
+             <canvas id="thought-bubble-canvas"></canvas>
+          </div>
         </div>
       </div>
 
-      <!-- Column 2: PDF Viewer -->
+      <!-- Column 2: Document Viewer (Middle) -->
       <div class="col-middle">
-        <div class="pdf-toolbar">
-            <span id="pdf-doc-label">No Document</span>
-            <div style="flex:1"></div>
-            <button id="prev-page">Prev</button>
-
-            <span contenteditable="true" id="page-indicator">1</span> / 
-            <span id="total-pages">0</span>
-            <!-- <span id="page-indicator">0 / 0</span> -->
-
-            <button id="next-page">Next</button>
-            <div style="width: 20px"></div>
-            <button id="snippet-tool-btn" title="Snippet Tool (Draw Box)">✂ Snippet</button>
+        <div class="doc-header">
+          <span id="pdf-doc-label">No Document Selected</span>
+          <div class="pdf-controls">
+            <button id="prev-page">◀</button>
+            <span id="page-indicator" contenteditable="true">1</span> / <span id="total-pages">--</span>
+            <button id="next-page">▶</button>
+            <button id="snippet-tool-btn" title="Snippet Tool">✂️</button>
+          </div>
         </div>
-        
-        <div id="pdf-wrapper">
-             <div id="selection-overlay"></div>
-             <!-- PDF Canvas(es) rendered here by JS -->
-             <div id="pdf-render-container"></div>
+        <div class="doc-body" id="pdf-wrapper">
+           <div id="selection-overlay"></div>
+           <div id="pdf-render-container">
+             <div style="color: #666; margin-top: 50px;">Select a document to view</div>
+           </div>
         </div>
       </div>
 
-      <!-- Column 3: Bookmarks -->
+      <!-- Column 3: Bookmarks & Snippets (Right) -->
       <div class="col-right">
-        <!-- Page Links (Top 40%) -->
-        <div class="bm-section-top" id="page-links-container">
-            <div class="bm-header">Page Links</div>
-            <div id="page-links-list" style="color: #999; font-size: 0.9rem;">No active answer.</div>
+        <!-- Relevant Pages -->
+        <div class="bm-section-top">
+          <div class="bm-header">Relevant Pages</div>
+          <div class="bm-list" id="page-links-list">
+             <div style="padding: 10px; color: #666; font-size: 0.9rem;">
+                Ask a question to find pages.
+             </div>
+          </div>
         </div>
 
-        <!-- Bookmarks & Folders (Bottom 60%) -->
+        <!-- Saved Snippets / Folders -->
         <div class="bm-section-bottom">
-            <div class="bm-header">Bookmarks (BMs)</div>
-            
-            <div class="folder-input">
-                <input type="text" id="new-folder-name" placeholder="New Folder Name">
-                <button id="create-folder-btn">+</button>
-            </div>
-
-            <div id="bookmarks-container">
-                <!-- Folders and Snippets go here -->
-            </div>
+          <div class="bm-header">
+             <span>Saved Snippets</span>
+             <button id="create-folder-btn" title="New Folder" style="background:none; border:none; color: #fff; cursor: pointer;">📂+</button>
+          </div>
+          <div style="padding: 5px 10px;">
+             <input type="text" id="new-folder-name" placeholder="New Folder Name..." style="width: 100%; background: #333; border: 1px solid #444; color: #ddd; padding: 4px; border-radius: 4px;">
+          </div>
+          <div class="bm-list" id="bookmarks-container">
+             <!-- Populated by bookmarks.js -->
+          </div>
         </div>
       </div>
     </div>
   </main>
 
-  <!-- Modular Scripts -->
+  <!-- Pass Python Data to JS -->
+  <script>
+    const HIERARCHY = {{ hierarchy | tojson }};
+  </script>
+
+  <!-- Application Scripts -->
   <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
   <script src="{{ url_for('static', filename='js/pdf_viewer.js') }}"></script>
   <script src="{{ url_for('static', filename='js/bookmarks.js') }}"></script>
   <script src="{{ url_for('static', filename='js/thought_bubble.js') }}"></script>
 
+  <!-- Dropdown Logic -->
   <script>
-    // Logic to load documents into the sidebar (Left Sidebar)
-    const categorySelect = document.getElementById('category');
-    const yearSelect = document.getElementById('year');
-    const docSelect = document.getElementById('doc_id');
+    document.addEventListener('DOMContentLoaded', () => {
+        const catSelect = document.getElementById('category');
+        const yearSelect = document.getElementById('year');
+        const docSelect = document.getElementById('doc_id');
 
-    // 1. Load Years when Category changes
-    categorySelect.addEventListener('change', async () => {
-      const category = categorySelect.value;
-      
-      // Reset dependent dropdowns
-      yearSelect.disabled = true;
-      yearSelect.innerHTML = '<option value="" disabled selected>Loading...</option>';
-      
-      docSelect.disabled = true;
-      docSelect.innerHTML = '<option value="" disabled selected>Select Year first</option>';
-
-      try {
-        const res = await fetch(`/years?category=${encodeURIComponent(category)}`);
-        const years = await res.json();
-
-        yearSelect.innerHTML = '';
-        if (!years.length) {
-          yearSelect.innerHTML = '<option value="" disabled selected>No years found</option>';
-        } else {
-          const placeholder = document.createElement('option');
-          placeholder.value = '';
-          placeholder.disabled = true;
-          placeholder.selected = true;
-          placeholder.textContent = 'Select a year';
-          yearSelect.appendChild(placeholder);
-
-          years.forEach(y => {
+        // Populate Categories
+        const categories = Object.keys(HIERARCHY);
+        categories.forEach(cat => {
             const opt = document.createElement('option');
-            opt.value = y;
-            opt.textContent = y;
-            yearSelect.appendChild(opt);
-          });
-          yearSelect.disabled = false;
-        }
-      } catch (err) {
-        console.error(err);
-        yearSelect.innerHTML = '<option value="" disabled selected>Error loading years</option>';
-      }
-    });
+            opt.value = cat;
+            opt.textContent = cat;
+            catSelect.appendChild(opt);
+        });
 
-    // 2. Load Documents when Year changes
-    yearSelect.addEventListener('change', async () => {
-      const category = categorySelect.value;
-      const year = yearSelect.value;
+        // Handle Category Change
+        catSelect.addEventListener('change', () => {
+            const cat = catSelect.value;
+            yearSelect.innerHTML = '<option value="" selected disabled>Select...</option>';
+            docSelect.innerHTML = '<option value="" selected disabled>Select Year first</option>';
+            docSelect.disabled = true;
 
-      docSelect.disabled = true;
-      docSelect.innerHTML = '<option value="" disabled selected>Loading...</option>';
+            if (cat && HIERARCHY[cat]) {
+                const years = Object.keys(HIERARCHY[cat]);
+                years.forEach(year => {
+                    const opt = document.createElement('option');
+                    opt.value = year;
+                    opt.textContent = year;
+                    yearSelect.appendChild(opt);
+                });
+                yearSelect.disabled = false;
+            }
+        });
 
-      try {
-        const res = await fetch(`/docs?category=${encodeURIComponent(category)}&year=${encodeURIComponent(year)}`);
-        const docs = await res.json();
+        // Handle Year Change
+        yearSelect.addEventListener('change', () => {
+            const cat = catSelect.value;
+            const year = yearSelect.value;
+            docSelect.innerHTML = '<option value="" selected disabled>Select...</option>';
 
-        docSelect.innerHTML = '';
-        if (!docs.length) {
-          docSelect.innerHTML = '<option value="" disabled selected>No documents found</option>';
-        } else {
-          const placeholder = document.createElement('option');
-          placeholder.value = '';
-          placeholder.disabled = true;
-          placeholder.selected = true;
-          placeholder.textContent = 'Select a document';
-          docSelect.appendChild(placeholder);
-
-          docs.forEach(d => {
-            const opt = document.createElement('option');
-            opt.value = d.id;
-            opt.textContent = d.label;
-            docSelect.appendChild(opt);
-          });
-          docSelect.disabled = false;
-        }
-      } catch (err) {
-        console.error(err);
-        docSelect.innerHTML = '<option value="" disabled selected>Error loading docs</option>';
-      }
+            if (cat && year && HIERARCHY[cat][year]) {
+                const docs = HIERARCHY[cat][year];
+                docs.forEach(doc => {
+                    const opt = document.createElement('option');
+                    // Value is the doc_id used by backend
+                    opt.value = doc.doc_id; 
+                    opt.textContent = doc.name;
+                    docSelect.appendChild(opt);
+                });
+                docSelect.disabled = false;
+            }
+        });
     });
   </script>
 </body>
