@@ -51,6 +51,21 @@ def index(*, context=None):
         hierarchy=hierarchy # Pass data to template
     )
 
+
+'''
+@auth.login_required
+def index(*, context):
+    return render_template(
+        'index.html',
+        user=context['user'],
+        edit_profile_url=auth.get_edit_profile_url(),
+        api_endpoint=os.getenv("ENDPOINT"),
+        title=f"Flask Web App Sample v{__version__}",
+    )
+'''
+
+
+
 @app.route("/ask_stream", methods=["POST"])
 def ask_stream():
     data = request.get_json()
