@@ -1,7 +1,7 @@
 import os
 import shutil
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_openai import AzureOpenAIEmbeddings
 from storage.blob_service import BlobService
 
 import re
@@ -9,7 +9,12 @@ import re
 class SearchService:
     def __init__(self):
         self.blob_service = BlobService()
-        self.embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        self.embeddings = AzureOpenAIEmbeddings(
+            azure_deployment=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT"),
+            openai_api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            openai_api_version=os.getenv("AZURE_OPENAI_API_VERSION")
+        )
         self.cache_dir = "temp_indices" # Local cache for vector stores
 
     def search(self, doc_id, query, k=5):

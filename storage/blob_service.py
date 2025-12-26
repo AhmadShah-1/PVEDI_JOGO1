@@ -115,10 +115,10 @@ class BlobService:
         """
         Downloads the FAISS index and PKL file for a given document.
         doc_id example: AAMA/2020/2605-20_errata
-        Target blob folder: vectorstores_RecursiveSplitting/AAMA/2020/2605-20_errata/
+        Target blob folder: vectorstores_azureopenai/AAMA/2020/2605-20_errata/
         """
         # Construct blob prefix
-        prefix = f"vectorstores_RecursiveSplitting/{doc_id}/"
+        prefix = f"vectorstores_azureopenai/{doc_id}/"
         
         blobs = self.container_client.list_blobs(name_starts_with=prefix)
         downloaded_files = []

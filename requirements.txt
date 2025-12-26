@@ -10,14 +10,9 @@ python-dotenv<0.22
 azure-storage-blob
 azure-identity
 
-# RAG / ML
+# RAG / ML (Optimized for Azure OpenAI)
 langchain
-faiss-cpu
-sentence-transformers
-numpy
 langchain-community
-
-# ---- torch (CPU) ----
---index-url https://download.pytorch.org/whl/cpu
-torch==2.9.1
---index-url https://pypi.org/simple
+langchain-openai
+faiss-cpu
+numpy
