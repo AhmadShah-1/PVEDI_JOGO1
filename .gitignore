@@ -111,5 +111,5 @@ flask_session/
 temp_indices/
 
 # Allow vendored Python dependencies for Azure App Service
-!.python_packages/
-!.python_packages/**
+.python_packages/
+.python_packages/**
