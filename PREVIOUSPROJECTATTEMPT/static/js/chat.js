@@ -49,7 +49,6 @@ const ChatModule = (() => {
     } else {
       const contentDiv = document.createElement('span');
       contentDiv.className = 'text-content';
-      // Do not set textContent immediately if it's meant to be streamed
       contentDiv.textContent = text;
       msgDiv.appendChild(contentDiv);
     }
@@ -78,11 +77,6 @@ const ChatModule = (() => {
     assistantText.classList.add('loading-cursor');
 
     dom.questionInput.value = '';
-
-    // Clear previous chat content if it was the placeholder
-    if (dom.chatContainer.querySelector('div[style*="text-align: center"]')) {
-      dom.chatContainer.innerHTML = '';
-    }
 
     try {
       const response = await fetch('/ask_stream', {

@@ -4,6 +4,8 @@ from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from storage.blob_service import BlobService
 
+import re
+
 class SearchService:
     def __init__(self):
         self.blob_service = BlobService()
@@ -16,24 +18,17 @@ class SearchService:
         2. Load index.
         3. Search.
         """
-        # 1. Prepare local path
-        # Use a safe path structure
+        # ... (keep existing code up to loading) ...
         safe_doc_id = doc_id.replace('/', '_').replace('\\', '_')
         target_dir = os.path.join(self.cache_dir, safe_doc_id)
         
-        # 2. Download if missing
-        # We check if folder exists, but ideally we should check if it's empty
         if not os.path.exists(target_dir) or not os.listdir(target_dir):
             print(f"Index not found locally for {doc_id}. Downloading...")
             files = self.blob_service.download_vector_store(doc_id, target_dir)
             if not files:
-                return [] # No index found
+                return []
 
-        # 3. Load Index
         try:
-            # FAISS load_local requires the folder path and the embeddings object
-            # Note: allow_dangerous_deserialization is needed for pickle files in recent langchain versions
-            # We assume internal safe files.
             vectorstore = FAISS.load_local(
                 target_dir, 
                 self.embeddings, 
@@ -44,15 +39,38 @@ class SearchService:
             return []
 
         # 4. Search
-        # similarity_search_with_score returns (Document, score)
-        # Lower score is better for L2 distance, but usually FAISS wraps this.
         results = vectorstore.similarity_search_with_score(query, k=k)
         
         processed_results = []
+        print("--- DEBUG: Search Results Metadata ---")
         for doc, score in results:
+            print(f"Metadata: {doc.metadata}")
+            
+            # 1. Try metadata 'page'
+            page_num = doc.metadata.get('page')
+            
+            # If 0-indexed (common in LangChain/PyPDFLoader), usually min is 0. 
+            # We assume it is 0-indexed if it comes from metadata.
+            if page_num is not None:
+                page_num = int(page_num) + 1
+            else:
+                # 2. If missing, try regex on content (e.g. "Page 15")
+                match = re.search(r'Page\s+(\d+)', doc.page_content, re.IGNORECASE)
+                if match:
+                    try:
+                        page_num = int(match.group(1))
+                        # Regex extracted pages are usually already 1-based (human readable)
+                        print(f"Extracted Page from Content: {page_num}")
+                    except:
+                        pass
+
+            # 3. Default to 1 if still not found
+            if not page_num:
+                page_num = 1
+            
             processed_results.append({
                 'content': doc.page_content,
-                'page': doc.metadata.get('page', 0), # Assuming metadata has 'page'
+                'page': page_num,
                 'score': float(score)
             })
             
@@ -62,18 +80,18 @@ class SearchService:
         """
         Reconstructs the blob path for the PDF and gets a SAS URL.
         doc_id: Category/Year/Filename_stem
-        We need to find the actual .pdf blob again or assume standard naming.
         """
-        # Re-scan or guess? Scanning is safer but slower. 
-        # For efficiency, let's assume standard structure: pdfs/{doc_id}.pdf
-        # The list_blobs_hierarchy stored the exact blob_path, but we don't have it here easily
-        # without querying again.
-        # Let's rely on the frontend passing the correct blob_path if possible, 
-        # OR just reconstruct: "pdfs/Category/Year/filename.pdf"
-        # Wait, doc_id was "Category/Year/filename_stem".
-        # We need the extension. 
+        # doc_id is like: AAMA/2021/2603-21_Coatings-Aluminum
+        # We need to turn this back into: pdfs/AAMA/2021/2603-21_Coatings-Aluminum.pdf
         
-        # Quick fix: Scan specifically for this file in the hierarchy logic or just guess .pdf
+        # Assumption: The original file has .pdf extension
         blob_path = f"pdfs/{doc_id}.pdf"
-        return self.blob_service.get_sas_url(blob_path)
+        
+        print(f"--- DEBUG: Constructing PDF URL ---")
+        print(f"Doc ID: {doc_id}")
+        print(f"Target Blob Path: {blob_path}")
+        
+        url = self.blob_service.get_sas_url(blob_path)
+        print(f"Generated URL: {url}")
+        return url
 

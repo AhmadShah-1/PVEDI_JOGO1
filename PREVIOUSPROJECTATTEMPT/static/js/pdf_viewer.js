@@ -83,38 +83,16 @@ const PdfViewerModule = (() => {
 
   async function loadPdf(url, initialPage, label) {
     dom.label.textContent = label || "Document";
-    console.log("--------------------------------------------------");
-    console.log("Attempting to load PDF from URL:", url);
-
     try {
-      // DEBUG: Pre-fetch to check status before PDF.js tries
-      const checkResponse = await fetch(url, { method: 'HEAD' });
-      console.log("PDF HEAD Check Status:", checkResponse.status, checkResponse.statusText);
-      
-      if (!checkResponse.ok) {
-        throw new Error(`PDF Fetch Failed: ${checkResponse.status} ${checkResponse.statusText}`);
-      }
-
       const loadingTask = pdfjsLib.getDocument(url);
-      
-      loadingTask.onProgress = function (progress) {
-        console.log(`PDF Loading Progress: ${(progress.loaded / progress.total * 100).toFixed(2)}%`);
-      };
-
       pdfDoc = await loadingTask.promise;
-      console.log("PDF Loaded Successfully. Pages:", pdfDoc.numPages);
-
       dom.totalPages.textContent = pdfDoc.numPages;
       
       pageNum = initialPage || 1;
       renderPage(pageNum);
     } catch (err) {
-      console.error('CRITICAL Error loading PDF:', err);
-      dom.container.innerHTML = `<div style="padding:20px; color:red">
-        <h3>Error loading PDF</h3>
-        <p>${err.message}</p>
-        <p>Check console for URL details.</p>
-      </div>`;
+      console.error('Error loading PDF:', err);
+      dom.container.innerHTML = `<div style="padding:20px; color:red">Error loading PDF</div>`;
     }
   }
 

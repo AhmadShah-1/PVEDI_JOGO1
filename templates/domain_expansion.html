@@ -27,14 +27,22 @@
         border-left: 1px solid #444;
         color: #ddd;
     }
+    /* Hide unneeded modules from Index Layout */
+    .chat-panel, .col-middle, aside.left-sidebar {
+        display: none !important; 
+    }
+    
+    /* Re-style Thought Bubble container to be full screen */
     .thought-bubble-panel {
         background: #2a2a2a;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
     }
-    .canvas-container {
+    .tb-canvas-container {
+        flex: 1;
         background-image: radial-gradient(#555 1px, transparent 1px);
-    }
-    .chat-panel, .col-middle, aside.left-sidebar {
-        display: none !important; /* Hide unnecessary parts */
+        background-size: 20px 20px;
     }
     .bm-header, .folder-header {
         color: #ddd;
@@ -51,17 +59,22 @@
     }
     .bm-section-top { display: none; } /* No page links in this view */
     
-    /* Make toolbar visible */
-    .tb-toolbar {
+    /* Toolbar Styling */
+    .tb-header {
         background: #111;
         border-bottom: 1px solid #333;
         color: #eee;
         display: flex;
-        gap: 10px;
+        justify-content: space-between;
         align-items: center;
-        padding: 5px;
+        padding: 10px;
     }
-    .tb-toolbar button {
+    .tb-tools {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .tb-tools button {
         background: #444;
         color: #fff;
         border: 1px solid #555;
@@ -69,117 +82,73 @@
         border-radius: 4px;
         cursor: pointer;
     }
-    .tb-toolbar button:hover {
-        background: #555;
-    }
-    .tb-toolbar button.active {
-        background: var(--accent-color, #007bff);
-        border-color: var(--accent-color, #007bff);
-    }
-    .tool-group {
-        display: flex;
-        gap: 5px;
-        background: #222;
-        padding: 3px;
-        border-radius: 4px;
-        align-items: center;
-    }
-    .tool-wrapper {
-        display: flex;
-        align-items: center;
-        background: #444;
-        border-radius: 4px;
-        overflow: hidden;
-    }
-    .tool-wrapper button {
-        border-radius: 0;
-        border: none;
-        border-right: 1px solid #555;
-    }
-    .tool-wrapper input[type="color"] {
-        width: 25px;
-        height: 25px;
-        border: none;
-        padding: 0;
-        background: none;
-        cursor: pointer;
+    .tb-tools button:hover { background: #555; }
+    .tb-tools button.active { background: var(--accent-color); border-color: var(--accent-color); }
+    .divider { width: 1px; height: 20px; background: #555; margin: 0 5px; }
+    input[type="color"] {
+        width: 30px; height: 30px; padding: 0; border: none; background: none; cursor: pointer;
     }
   </style>
 </head>
-<body class="domain-body">
+<body>
 
   <main>
     <div class="workspace">
-      <!-- Main Canvas Area -->
+      <!-- Full Screen Canvas Area -->
       <div class="col-left">
         <div class="thought-bubble-panel">
-            <div class="tb-toolbar">
-                <span style="font-weight: bold; padding: 0 10px; align-self: center;">Domain Expansion</span>
+          <div class="tb-header">
+            <span style="font-weight: bold; font-size: 1.2rem;">Domain Expansion</span>
+            <div class="tb-tools">
+                <button id="tb-select" title="Select Tool">👆</button>
+                <button id="tb-draw" title="Draw">✏️</button>
+                <input type="color" id="tb-draw-color" value="#ffffff" title="Brush Color">
                 
-                <div class="tool-group">
-                    <button id="tb-select" class="active" title="Select/Move">↖</button>
-                    
-                    <div class="tool-wrapper">
-                        <button id="tb-draw" title="Free Draw">✎</button>
-                        <input type="color" id="tb-draw-color" value="#000000" title="Brush Color">
-                    </div>
+                <div class="divider"></div>
+                
+                <button id="tb-text" title="Add Text">T</button>
+                <input type="color" id="tb-text-color" value="#ffffff" title="Text Color">
+                
+                <button id="tb-rect" title="Add Rectangle">⬜</button>
+                <input type="color" id="tb-rect-color" value="#ffff00" title="Rect Color">
+                
+                <button id="tb-circle" title="Add Circle">⚪</button>
+                <input type="color" id="tb-circle-color" value="#ffffff" title="Circle Stroke Color">
 
-                    <div class="tool-wrapper">
-                        <button id="tb-text" title="Add Text">T</button>
-                        <input type="color" id="tb-text-color" value="#000000" title="Text Color">
-                    </div>
-                    
-                    <div class="tool-wrapper">
-                        <button id="tb-rect" title="Add Highlight Box">⬜</button>
-                        <input type="color" id="tb-rect-color" value="#ffff00" title="Box Color">
-                    </div>
+                <button id="tb-note" title="Add Sticky Note">📝</button>
 
-                    <div class="tool-wrapper">
-                        <button id="tb-circle" title="Add Circle">◯</button>
-                        <input type="color" id="tb-circle-color" value="#000000" title="Circle Color">
-                    </div>
-
-                    <button id="tb-note" title="Add Sticky Note">📝</button>
-                </div>
-
-                <div style="flex:1"></div>
-
-                <button id="de-download">Download PDF</button>
-                <button id="tb-clear">Clear</button>
+                <div class="divider"></div>
+                <button id="tb-clear" title="Clear Canvas">🗑️</button>
+                <button id="tb-download" title="Download PNG">💾</button>
+                <button id="de-download" title="Export PDF">📄</button>
             </div>
-            <div class="canvas-container" id="canvas-container">
-                <canvas id="thought-bubble-canvas"></canvas>
-            </div>
+          </div>
+          <div class="tb-canvas-container" id="canvas-container">
+             <canvas id="thought-bubble-canvas"></canvas>
+          </div>
         </div>
       </div>
 
-      <!-- Sidebar with Saved Snippets -->
-      <div class="col-right domain-sidebar">
-        <div class="bm-section-bottom">
-            <div class="bm-header">Saved Snippets</div>
-            
-            <div style="font-size: 0.8rem; padding: 10px; color: #888;">
-                Drag items onto the canvas.
-            </div>
-
-            <div id="bookmarks-container">
-                <!-- Populated via JS -->
-            </div>
+      <!-- Bookmarks Side Panel (for Dragging Snippets) -->
+      <div class="col-right" style="width: 250px; flex: none;">
+        <div class="bm-section-bottom" style="height: 100%; border-top: none;">
+          <div class="bm-header">
+             <span>Snippet Library</span>
+          </div>
+          <div class="bm-list" id="bookmarks-container" style="height: calc(100% - 40px);">
+             <!-- Populated by JS -->
+          </div>
         </div>
       </div>
     </div>
   </main>
 
-  <!-- Re-use modules where possible, or simplified versions -->
-  <!-- We need bookmarks.js (for loading) and thought_bubble.js (for canvas) -->
-  <!-- But bookmarks.js assumes presence of DOM elements that might be missing or different. -->
-  <!-- Let's inline a simplified logic for this specific page to avoid conflicts, 
-       since it only reads localStorage and handles Drag-Drop. -->
-
+  <!-- Re-use our centralized logic -->
   <script src="{{ url_for('static', filename='js/thought_bubble.js') }}"></script>
 
   <script>
     // Simplified Bookmarks Loader for Domain Expansion
+    // Reads from localStorage to display available snippets to drag onto canvas
     const BookmarksLoader = (() => {
         const container = document.getElementById('bookmarks-container');
         let bookmarks = [];
@@ -197,6 +166,11 @@
 
         function render() {
             container.innerHTML = '';
+            if (bookmarks.length === 0) {
+                container.innerHTML = '<div style="padding:10px; color:#666;">No snippets found. Go back to main workspace to create some.</div>';
+                return;
+            }
+
             bookmarks.forEach(item => {
                 if (item.type === 'folder') {
                     renderFolder(item);
@@ -210,13 +184,11 @@
             const el = document.createElement('div');
             el.className = 'folder-item';
             el.innerHTML = `
-                <div class="folder-header">
+                <div class="folder-header" style="padding:8px; cursor:pointer;">
                     <span>📁 ${folder.name}</span>
-                    <span>(${folder.children.length})</span>
                 </div>
-                <div class="folder-content open" style="display:block"></div>
+                <div class="folder-content" style="padding-left:10px;"></div>
             `;
-            
             const content = el.querySelector('.folder-content');
             folder.children.forEach(child => {
                 content.appendChild(renderSnippet(child, false));
@@ -227,20 +199,16 @@
         function renderSnippet(snippet, append=true) {
             const el = document.createElement('div');
             el.className = 'snippet-item';
-            el.draggable = true;
-            el.innerHTML = `<div class="snippet-name">${snippet.name}</div>`;
+            el.style.padding = '8px';
+            el.style.borderBottom = '1px solid #444';
+            el.style.cursor = 'pointer';
+            el.textContent = snippet.name;
             
-            // Drag Start - Pass data to be dropped on Canvas
-            el.addEventListener('dragstart', (e) => {
-                 // We pass the full snippet data object
-                 e.dataTransfer.setData('text/plain', JSON.stringify(snippet));
-            });
-
-            // On Click - Add to canvas directly
-            el.addEventListener('click', () => {
+            // Clicking adds it to canvas
+            el.onclick = () => {
                 window.dispatchEvent(new CustomEvent('add-to-canvas', { detail: snippet }));
-            });
-
+            };
+            
             if (append) container.appendChild(el);
             return el;
         }
@@ -248,24 +216,7 @@
         return { init };
     })();
 
-    document.addEventListener('DOMContentLoaded', () => {
-        BookmarksLoader.init();
-
-        // Also, enable Drop on the Canvas Container from sidebar items
-        const canvasContainer = document.getElementById('canvas-container');
-        canvasContainer.addEventListener('dragover', e => e.preventDefault());
-        canvasContainer.addEventListener('drop', e => {
-            e.preventDefault();
-            try {
-                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-                if (data.dataUrl) {
-                     window.dispatchEvent(new CustomEvent('add-to-canvas', { detail: data }));
-                }
-            } catch(e) {}
-        });
-    });
+    document.addEventListener('DOMContentLoaded', BookmarksLoader.init);
   </script>
-
 </body>
 </html>
-
