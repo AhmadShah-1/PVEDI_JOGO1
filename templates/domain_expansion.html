@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Domain Expansion</title>
+  
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    /* Overrides for Domain Expansion Mode */
+    body {
+        background-color: #222;
+        color: #eee;
+    }
+    .workspace {
+        height: 100vh;
+    }
+    .col-left {
+        flex: 1; /* Main Canvas Area */
+        background: #333;
+        border: none;
+    }
+    .col-right {
+        background: #1a1a1a;
+        border-left: 1px solid #444;
+        color: #ddd;
+    }
+    .thought-bubble-panel {
+        background: #2a2a2a;
+    }
+    .canvas-container {
+        background-image: radial-gradient(#555 1px, transparent 1px);
+    }
+    .chat-panel, .col-middle, aside.left-sidebar {
+        display: none !important; /* Hide unnecessary parts */
+    }
+    .bm-header, .folder-header {
+        color: #ddd;
+        background: #333;
+        border-bottom-color: #444;
+    }
+    .snippet-item {
+        background: #333;
+        border-color: #444;
+        color: #ddd;
+    }
+    .snippet-item:hover {
+        background: #444;
+    }
+    .bm-section-top { display: none; } /* No page links in this view */
+    
+    /* Make toolbar visible */
+    .tb-toolbar {
+        background: #111;
+        border-bottom: 1px solid #333;
+        color: #eee;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 5px;
+    }
+    .tb-toolbar button {
+        background: #444;
+        color: #fff;
+        border: 1px solid #555;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .tb-toolbar button:hover {
+        background: #555;
+    }
+    .tb-toolbar button.active {
+        background: var(--accent-color, #007bff);
+        border-color: var(--accent-color, #007bff);
+    }
+    .tool-group {
+        display: flex;
+        gap: 5px;
+        background: #222;
+        padding: 3px;
+        border-radius: 4px;
+        align-items: center;
+    }
+    .tool-wrapper {
+        display: flex;
+        align-items: center;
+        background: #444;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .tool-wrapper button {
+        border-radius: 0;
+        border: none;
+        border-right: 1px solid #555;
+    }
+    .tool-wrapper input[type="color"] {
+        width: 25px;
+        height: 25px;
+        border: none;
+        padding: 0;
+        background: none;
+        cursor: pointer;
+    }
+  </style>
+</head>
+<body class="domain-body">
+
+  <main>
+    <div class="workspace">
+      <!-- Main Canvas Area -->
+      <div class="col-left">
+        <div class="thought-bubble-panel">
+            <div class="tb-toolbar">
+                <span style="font-weight: bold; padding: 0 10px; align-self: center;">Domain Expansion</span>
+                
+                <div class="tool-group">
+                    <button id="tb-select" class="active" title="Select/Move">↖</button>
+                    
+                    <div class="tool-wrapper">
+                        <button id="tb-draw" title="Free Draw">✎</button>
+                        <input type="color" id="tb-draw-color" value="#000000" title="Brush Color">
+                    </div>
+
+                    <div class="tool-wrapper">
+                        <button id="tb-text" title="Add Text">T</button>
+                        <input type="color" id="tb-text-color" value="#000000" title="Text Color">
+                    </div>
+                    
+                    <div class="tool-wrapper">
+                        <button id="tb-rect" title="Add Highlight Box">⬜</button>
+                        <input type="color" id="tb-rect-color" value="#ffff00" title="Box Color">
+                    </div>
+
+                    <div class="tool-wrapper">
+                        <button id="tb-circle" title="Add Circle">◯</button>
+                        <input type="color" id="tb-circle-color" value="#000000" title="Circle Color">
+                    </div>
+
+                    <button id="tb-note" title="Add Sticky Note">📝</button>
+                </div>
+
+                <div style="flex:1"></div>
+
+                <button id="de-download">Download PDF</button>
+                <button id="tb-clear">Clear</button>
+            </div>
+            <div class="canvas-container" id="canvas-container">
+                <canvas id="thought-bubble-canvas"></canvas>
+            </div>
+        </div>
+      </div>
+
+      <!-- Sidebar with Saved Snippets -->
+      <div class="col-right domain-sidebar">
+        <div class="bm-section-bottom">
+            <div class="bm-header">Saved Snippets</div>
+            
+            <div style="font-size: 0.8rem; padding: 10px; color: #888;">
+                Drag items onto the canvas.
+            </div>
+
+            <div id="bookmarks-container">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Re-use modules where possible, or simplified versions -->
+  <!-- We need bookmarks.js (for loading) and thought_bubble.js (for canvas) -->
+  <!-- But bookmarks.js assumes presence of DOM elements that might be missing or different. -->
+  <!-- Let's inline a simplified logic for this specific page to avoid conflicts, 
+       since it only reads localStorage and handles Drag-Drop. -->
+
+  <script src="{{ url_for('static', filename='js/thought_bubble.js') }}"></script>
+
+  <script>
+    // Simplified Bookmarks Loader for Domain Expansion
+    const BookmarksLoader = (() => {
+        const container = document.getElementById('bookmarks-container');
+        let bookmarks = [];
+
+        function init() {
+            loadFromStorage();
+            render();
+        }
+
+        function loadFromStorage() {
+            try {
+                bookmarks = JSON.parse(localStorage.getItem('rag_bookmarks') || '[]');
+            } catch(e) {}
+        }
+
+        function render() {
+            container.innerHTML = '';
+            bookmarks.forEach(item => {
+                if (item.type === 'folder') {
+                    renderFolder(item);
+                } else {
+                    renderSnippet(item);
+                }
+            });
+        }
+
+        function renderFolder(folder) {
+            const el = document.createElement('div');
+            el.className = 'folder-item';
+            el.innerHTML = `
+                <div class="folder-header">
+                    <span>📁 ${folder.name}</span>
+                    <span>(${folder.children.length})</span>
+                </div>
+                <div class="folder-content open" style="display:block"></div>
+            `;
+            
+            const content = el.querySelector('.folder-content');
+            folder.children.forEach(child => {
+                content.appendChild(renderSnippet(child, false));
+            });
+            container.appendChild(el);
+        }
+
+        function renderSnippet(snippet, append=true) {
+            const el = document.createElement('div');
+            el.className = 'snippet-item';
+            el.draggable = true;
+            el.innerHTML = `<div class="snippet-name">${snippet.name}</div>`;
+            
+            // Drag Start - Pass data to be dropped on Canvas
+            el.addEventListener('dragstart', (e) => {
+                 // We pass the full snippet data object
+                 e.dataTransfer.setData('text/plain', JSON.stringify(snippet));
+            });
+
+            // On Click - Add to canvas directly
+            el.addEventListener('click', () => {
+                window.dispatchEvent(new CustomEvent('add-to-canvas', { detail: snippet }));
+            });
+
+            if (append) container.appendChild(el);
+            return el;
+        }
+
+        return { init };
+    })();
+
+    document.addEventListener('DOMContentLoaded', () => {
+        BookmarksLoader.init();
+
+        // Also, enable Drop on the Canvas Container from sidebar items
+        const canvasContainer = document.getElementById('canvas-container');
+        canvasContainer.addEventListener('dragover', e => e.preventDefault());
+        canvasContainer.addEventListener('drop', e => {
+            e.preventDefault();
+            try {
+                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                if (data.dataUrl) {
+                     window.dispatchEvent(new CustomEvent('add-to-canvas', { detail: data }));
+                }
+            } catch(e) {}
+        });
+    });
+  </script>
+
+</body>
+</html>
+
