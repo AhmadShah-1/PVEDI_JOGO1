@@ -33,6 +33,17 @@ blob_service = BlobService()
 search_service = SearchService()
 
 @app.route("/")
+@auth.login_required
+def index(*, context):
+    return render_template(
+        'index.html',
+        user=context['user'],
+        edit_profile_url=auth.get_edit_profile_url(),
+        api_endpoint=os.getenv("ENDPOINT"),
+        title=f"Flask Web App Sample v{__version__}",
+    )
+
+'''
 def index(*, context=None):
     # 1. Fetch Hierarchy for Dropdowns
     hierarchy = blob_service.list_blobs_hierarchy()
@@ -50,19 +61,11 @@ def index(*, context=None):
         title=f"Flask Web App Sample v{__version__}",
         hierarchy=hierarchy # Pass data to template
     )
+'''
 
 
-'''
-@auth.login_required
-def index(*, context):
-    return render_template(
-        'index.html',
-        user=context['user'],
-        edit_profile_url=auth.get_edit_profile_url(),
-        api_endpoint=os.getenv("ENDPOINT"),
-        title=f"Flask Web App Sample v{__version__}",
-    )
-'''
+
+
 
 
 
