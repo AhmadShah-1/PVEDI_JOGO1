@@ -64,9 +64,10 @@ def index(*, context=None):
     )
 
 '''
-@app.route("/redirect", methods=["GET", "POST"])
-def redirect_handler():
-    return auth.authorize()  # process the AAD callback
+# Add to app.py
+@app.route("/getAToken", methods=["GET", "POST"])
+def authorized():
+    return auth.authorize()  # handles the AAD callback
 
 
 
