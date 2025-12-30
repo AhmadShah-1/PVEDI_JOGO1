@@ -43,7 +43,7 @@ def index(*, context):
         title=f"Flask Web App Sample v{__version__}",
     )
 
-    
+
 '''
 def index(*, context=None):
     # 1. Fetch Hierarchy for Dropdowns
@@ -64,7 +64,9 @@ def index(*, context=None):
     )
 
 '''
-
+@app.route("/redirect", methods=["GET", "POST"])
+def redirect_handler():
+    return auth.authorize()  # process the AAD callback
 
 
 
