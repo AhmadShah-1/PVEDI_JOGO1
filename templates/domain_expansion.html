@@ -49,6 +49,21 @@
         background: #333;
         border-bottom-color: #444;
     }
+    .folder-item {
+        color: #ddd;
+    }
+    .folder-content {
+        display: none;
+    }
+    .folder-content.open {
+        display: block !important;
+    }
+    .folder-title {
+        color: #ddd;
+    }
+    .folder-title:hover {
+        color: var(--accent-color);
+    }
     .snippet-item {
         background: #333;
         border-color: #444;
@@ -185,11 +200,19 @@
             el.className = 'folder-item';
             el.innerHTML = `
                 <div class="folder-header" style="padding:8px; cursor:pointer;">
-                    <span>📁 ${folder.name}</span>
+                    <span class="folder-title">📁 ${folder.name}</span>
                 </div>
-                <div class="folder-content" style="padding-left:10px;"></div>
+                <div class="folder-content" style="padding-left:10px; display:none;"></div>
             `;
             const content = el.querySelector('.folder-content');
+            const header = el.querySelector('.folder-header');
+
+            // Toggle open/close
+            header.addEventListener('click', () => {
+                const isOpen = content.style.display === 'block';
+                content.style.display = isOpen ? 'none' : 'block';
+            });
+
             folder.children.forEach(child => {
                 content.appendChild(renderSnippet(child, false));
             });
@@ -204,9 +227,16 @@
             el.style.cursor = 'pointer';
             el.textContent = snippet.name;
             
-            // Clicking adds it to canvas
+            // Toggle add/remove on click
             el.onclick = () => {
-                window.dispatchEvent(new CustomEvent('add-to-canvas', { detail: snippet }));
+                const isActive = el.classList.contains('active');
+                if (isActive) {
+                    el.classList.remove('active');
+                    window.dispatchEvent(new CustomEvent('remove-from-canvas', { detail: snippet }));
+                } else {
+                    el.classList.add('active');
+                    window.dispatchEvent(new CustomEvent('add-to-canvas', { detail: snippet }));
+                }
             };
             
             if (append) container.appendChild(el);

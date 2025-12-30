@@ -31,7 +31,7 @@ class BlobService:
         # List all blobs in the pdfs folder
         print("--- DEBUG: Listing Blobs ---")
         try:
-            blobs = self.container_client.list_blobs(name_starts_with="pdfs/")
+            blobs = self.container_client.list_blobs(name_starts_with="Codes/")
             for blob in blobs:
                 # print(f"Found blob: {blob.name}") # Uncomment to see all raw blob names
                 
@@ -82,7 +82,7 @@ class BlobService:
                     blob_name=blob_path,
                     account_key=self.blob_service_client.credential.account_key,
                     permission=BlobSasPermissions(read=True),
-                    expiry=datetime.utcnow() + timedelta(hours=1)
+                    expiry=datetime.utcnow() + timedelta(hours=3)
                 )
                 url = f"https://{self.blob_service_client.account_name}.blob.core.windows.net/{self.container_name}/{blob_path}?{sas_token}"
                 print(f"Generated SAS (Key): {url[:50]}...")
@@ -110,6 +110,73 @@ class BlobService:
         except Exception as e:
             print(f"Error generating SAS: {e}")
             return None
+
+    def list_directory_contents(self, path="Codes/"):
+        """
+        Lists the contents of a directory in blob storage.
+        Returns both folders and PDF files at the current level.
+        
+        Args:
+            path: The path to list (e.g., "pdfs/" or "pdfs/Category/Year/")
+        
+        Returns:
+            {
+                'folders': [{'name': 'folder_name', 'path': 'pdfs/folder_name/'}],
+                'files': [{'name': 'file.pdf', 'path': 'pdfs/folder_name/file.pdf', 'doc_id': '...'}]
+            }
+        """
+        folders = set()
+        files = []
+        
+        # Ensure path ends with /
+        if not path.endswith('/'):
+            path += '/'
+        
+        try:
+            # List all blobs with the given prefix
+            blobs = self.container_client.list_blobs(name_starts_with=path)
+            
+            for blob in blobs:
+                # Get relative path from our starting point
+                relative_path = blob.name[len(path):]
+                
+                # Skip empty paths
+                if not relative_path:
+                    continue
+                
+                # Check if this is a file at current level or in a subdirectory
+                parts = relative_path.split('/')
+                
+                if len(parts) == 1:
+                    # File at current level
+                    if blob.name.endswith('.pdf'):
+                        # Extract doc_id from the full path
+                        # Remove 'Codes/' prefix and '.pdf' suffix
+                        doc_id_path = blob.name[6:] if blob.name.startswith('Codes/') else blob.name
+                        doc_id = os.path.splitext(doc_id_path)[0]
+                        
+                        files.append({
+                            'name': parts[0],
+                            'path': blob.name,
+                            'doc_id': doc_id
+                        })
+                else:
+                    # This is in a subdirectory - add the folder
+                    folder_name = parts[0]
+                    folders.add(folder_name)
+            
+            # Convert folders set to list of dicts
+            folder_list = [{'name': f, 'path': path + f + '/'} for f in sorted(folders)]
+            
+            return {
+                'folders': folder_list,
+                'files': sorted(files, key=lambda x: x['name']),
+                'current_path': path
+            }
+            
+        except Exception as e:
+            print(f"Error listing directory contents: {e}")
+            return {'folders': [], 'files': [], 'current_path': path}
 
     def download_vector_store(self, doc_id, local_dir):
         """

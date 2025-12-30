@@ -41,21 +41,17 @@
       </div>
     {% endif %}
 
-    <label for="category">Code Type</label>
-    <select id="category">
-      <option value="" selected disabled>Select...</option>
-      <!-- Populated by JS -->
-    </select>
-
-    <label for="year">Year</label>
-    <select id="year" disabled>
-      <option value="" selected disabled>Select Code Type first</option>
-    </select>
-
-    <label for="doc_id">Document</label>
-    <select id="doc_id" disabled>
-      <option value="" selected disabled>Select Year first</option>
-    </select>
+    <label>Document Browser</label>
+    
+    <!-- Breadcrumb Navigation -->
+    <div id="breadcrumb" class="breadcrumb">
+      <span class="breadcrumb-item" data-path="Codes/">📁 Root</span>
+    </div>
+    
+    <!-- File Explorer Container -->
+    <div id="file-explorer" class="file-explorer">
+      <div class="explorer-loading">Loading...</div>
+    </div>
 
     <div style="flex: 1"></div>
     <div style="margin-top: 20px;">
@@ -114,6 +110,7 @@
             <button id="prev-page">◀</button>
             <span id="page-indicator" contenteditable="true">1</span> / <span id="total-pages">--</span>
             <button id="next-page">▶</button>
+            <button id="view-pdf-btn" title="View PDF" disabled>View PDF</button>
             <button id="snippet-tool-btn" title="Snippet Tool">✂️</button>
           </div>
         </div>
@@ -154,71 +151,159 @@
     </div>
   </main>
 
-  <!-- Pass Python Data to JS -->
-  <script>
-    const HIERARCHY = {{ hierarchy | tojson }};
-  </script>
-
   <!-- Application Scripts -->
   <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
   <script src="{{ url_for('static', filename='js/pdf_viewer.js') }}"></script>
   <script src="{{ url_for('static', filename='js/bookmarks.js') }}"></script>
   <script src="{{ url_for('static', filename='js/thought_bubble.js') }}"></script>
 
-  <!-- Dropdown Logic -->
+  <!-- File Explorer Logic -->
   <script>
+    let currentPath = 'Codes/';
+    let selectedDocId = null;
+    let selectedFileName = null;
+
     document.addEventListener('DOMContentLoaded', () => {
-        const catSelect = document.getElementById('category');
-        const yearSelect = document.getElementById('year');
-        const docSelect = document.getElementById('doc_id');
-
-        // Populate Categories
-        const categories = Object.keys(HIERARCHY);
-        categories.forEach(cat => {
-            const opt = document.createElement('option');
-            opt.value = cat;
-            opt.textContent = cat;
-            catSelect.appendChild(opt);
-        });
-
-        // Handle Category Change
-        catSelect.addEventListener('change', () => {
-            const cat = catSelect.value;
-            yearSelect.innerHTML = '<option value="" selected disabled>Select...</option>';
-            docSelect.innerHTML = '<option value="" selected disabled>Select Year first</option>';
-            docSelect.disabled = true;
-
-            if (cat && HIERARCHY[cat]) {
-                const years = Object.keys(HIERARCHY[cat]);
-                years.forEach(year => {
-                    const opt = document.createElement('option');
-                    opt.value = year;
-                    opt.textContent = year;
-                    yearSelect.appendChild(opt);
-                });
-                yearSelect.disabled = false;
-            }
-        });
-
-        // Handle Year Change
-        yearSelect.addEventListener('change', () => {
-            const cat = catSelect.value;
-            const year = yearSelect.value;
-            docSelect.innerHTML = '<option value="" selected disabled>Select...</option>';
-
-            if (cat && year && HIERARCHY[cat][year]) {
-                const docs = HIERARCHY[cat][year];
-                docs.forEach(doc => {
-                    const opt = document.createElement('option');
-                    // Value is the doc_id used by backend
-                    opt.value = doc.doc_id; 
-                    opt.textContent = doc.name;
-                    docSelect.appendChild(opt);
-                });
-                docSelect.disabled = false;
-            }
-        });
+        // Load root directory on page load
+        loadDirectory('Codes/');
     });
+
+    async function loadDirectory(path) {
+        const explorer = document.getElementById('file-explorer');
+        explorer.innerHTML = '<div class="explorer-loading">Loading...</div>';
+        
+        try {
+            const response = await fetch(`/browse_directory?path=${encodeURIComponent(path)}`);
+            const data = await response.json();
+            
+            currentPath = data.current_path;
+            updateBreadcrumb(currentPath);
+            renderExplorer(data);
+        } catch (error) {
+            console.error('Error loading directory:', error);
+            explorer.innerHTML = '<div class="explorer-error">Error loading directory</div>';
+        }
+    }
+
+    function updateBreadcrumb(path) {
+        const breadcrumb = document.getElementById('breadcrumb');
+        breadcrumb.innerHTML = '';
+        
+        // Split path into parts (e.g., "pdfs/Category/Year/" -> ["pdfs", "Category", "Year"])
+        const parts = path.split('/').filter(p => p);
+        
+        // Add root
+        const rootSpan = document.createElement('span');
+        rootSpan.className = 'breadcrumb-item';
+        rootSpan.dataset.path = 'Codes/';
+        rootSpan.textContent = '📁 Root';
+        rootSpan.addEventListener('click', () => loadDirectory('Codes/'));
+        breadcrumb.appendChild(rootSpan);
+        
+        // Add each part
+        let accumulatedPath = '';
+        for (let i = 0; i < parts.length; i++) {
+            if (parts[i] === 'Codes') {
+                accumulatedPath = 'Codes/';
+                continue;
+            }
+            
+            accumulatedPath += parts[i] + '/';
+            
+            const separator = document.createElement('span');
+            separator.className = 'breadcrumb-separator';
+            separator.textContent = ' / ';
+            breadcrumb.appendChild(separator);
+            
+            const partSpan = document.createElement('span');
+            partSpan.className = 'breadcrumb-item';
+            partSpan.dataset.path = accumulatedPath;
+            partSpan.textContent = parts[i];
+            
+            // Only make it clickable if it's not the last item
+            if (i < parts.length - 1) {
+                const clickPath = accumulatedPath;
+                partSpan.addEventListener('click', () => loadDirectory(clickPath));
+            } else {
+                partSpan.classList.add('active');
+            }
+            
+            breadcrumb.appendChild(partSpan);
+        }
+    }
+
+    function renderExplorer(data) {
+        const explorer = document.getElementById('file-explorer');
+        explorer.innerHTML = '';
+        
+        // Show folders first
+        data.folders.forEach(folder => {
+            const folderDiv = document.createElement('div');
+            folderDiv.className = 'explorer-item folder';
+            folderDiv.innerHTML = `
+                <span class="icon">📁</span>
+                <span class="name">${folder.name}</span>
+            `;
+            folderDiv.addEventListener('click', () => loadDirectory(folder.path));
+            explorer.appendChild(folderDiv);
+        });
+        
+        // Then show files
+        data.files.forEach(file => {
+            const fileDiv = document.createElement('div');
+            fileDiv.className = 'explorer-item file';
+            fileDiv.dataset.docId = file.doc_id;
+            fileDiv.innerHTML = `
+                <span class="icon">📄</span>
+                <span class="name">${file.name}</span>
+            `;
+            fileDiv.addEventListener('click', () => selectDocument(file.doc_id, file.name, fileDiv));
+            explorer.appendChild(fileDiv);
+        });
+        
+        // Show empty message if no items
+        if (data.folders.length === 0 && data.files.length === 0) {
+            explorer.innerHTML = '<div class="explorer-empty">This folder is empty</div>';
+        }
+    }
+
+    function selectDocument(docId, fileName, element) {
+        // Remove previous selection
+        document.querySelectorAll('.explorer-item.selected').forEach(el => {
+            el.classList.remove('selected');
+        });
+        
+        // Add selection to clicked element
+        element.classList.add('selected');
+        
+        // Store selected doc_id and filename
+        selectedDocId = docId;
+        selectedFileName = fileName;
+        
+        // Update the hidden doc_id field for the chat system
+        // The chat.js expects a #doc_id element
+        let docIdInput = document.getElementById('doc_id');
+        if (!docIdInput) {
+            // Create a hidden input if it doesn't exist
+            docIdInput = document.createElement('input');
+            docIdInput.type = 'hidden';
+            docIdInput.id = 'doc_id';
+            document.body.appendChild(docIdInput);
+        }
+        docIdInput.value = docId;
+        
+        // Trigger change event for chat.js compatibility
+        const changeEvent = new Event('change');
+        docIdInput.dispatchEvent(changeEvent);
+        
+        // Enable View PDF button
+        const viewPdfBtn = document.getElementById('view-pdf-btn');
+        if (viewPdfBtn) {
+            viewPdfBtn.disabled = false;
+        }
+        
+        console.log('Selected document:', docId);
+    }
   </script>
 </body>
 </html>

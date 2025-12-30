@@ -6,9 +6,7 @@ const ChatModule = (() => {
     chatContainer: document.getElementById('chat-container'),
     questionInput: document.getElementById('question'),
     askBtn: document.getElementById('ask-btn'),
-    clearChatBtn: document.getElementById('clear-chat'),
-    docSelect: document.getElementById('doc_id'),
-    yearSelect: document.getElementById('year')
+    clearChatBtn: document.getElementById('clear-chat')
   };
 
   let currentController = null;
@@ -17,15 +15,24 @@ const ChatModule = (() => {
     dom.askBtn.addEventListener('click', handleAsk);
     dom.clearChatBtn.addEventListener('click', clearChat);
     dom.questionInput.addEventListener('input', checkInput);
-    dom.docSelect.addEventListener('change', checkInput);
+    
+    // Listen for changes on doc_id (might be created dynamically)
+    document.addEventListener('change', (e) => {
+      if (e.target && e.target.id === 'doc_id') {
+        checkInput();
+      }
+    });
 
     // Initial check
     checkInput();
   }
 
   function checkInput() {
-    // Requires document to be selected (which implies year/category are selected)
-    if (dom.docSelect.value && dom.questionInput.value.trim()) {
+    // Get doc_id dynamically in case it's created after page load
+    const docSelect = document.getElementById('doc_id');
+    
+    // Requires document to be selected
+    if (docSelect && docSelect.value && dom.questionInput.value.trim()) {
       dom.askBtn.disabled = false;
     } else {
       dom.askBtn.disabled = true;
@@ -64,7 +71,8 @@ const ChatModule = (() => {
   }
 
   async function handleAsk() {
-    const docId = dom.docSelect.value;
+    const docSelect = document.getElementById('doc_id');
+    const docId = docSelect ? docSelect.value : null;
     const question = dom.questionInput.value.trim();
     if (!docId || !question) return;
 

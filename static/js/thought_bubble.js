@@ -59,15 +59,18 @@ const ThoughtBubbleModule = (() => {
   }
 
   function initCanvas() {
-    const width = dom.canvasContainer.clientWidth;
-    const height = dom.canvasContainer.clientHeight;
+    // Ensure container has proper dimensions
+    const width = dom.canvasContainer.clientWidth || 800;
+    const height = dom.canvasContainer.clientHeight || 600;
 
     dom.canvasEl.width = width;
     dom.canvasEl.height = height;
 
     canvas = new fabric.Canvas('thought-bubble-canvas', {
       backgroundColor: 'transparent',
-      selection: true
+      selection: true,
+      width: width,
+      height: height
     });
     
     canvas.freeDrawingBrush.width = 5;
@@ -86,6 +89,9 @@ const ThoughtBubbleModule = (() => {
         }
       }
     });
+    
+    // Force initial resize after a short delay to ensure container is fully rendered
+    setTimeout(() => resizeCanvas(), 100);
   }
 
   function resizeCanvas() {

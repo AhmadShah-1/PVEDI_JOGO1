@@ -11,6 +11,7 @@ const PdfViewerModule = (() => {
     totalPages: document.getElementById('total-pages'),
     label: document.getElementById('pdf-doc-label'),
     snippetBtn: document.getElementById('snippet-tool-btn'),
+    viewPdfBtn: document.getElementById('view-pdf-btn'),
     overlay: document.getElementById('selection-overlay'),
   };
 
@@ -50,6 +51,11 @@ const PdfViewerModule = (() => {
     dom.nextBtn.addEventListener('click', onNextPage);
     dom.snippetBtn.addEventListener('click', toggleSnippetMode);
     
+    // Handle View PDF button
+    if (dom.viewPdfBtn) {
+      dom.viewPdfBtn.addEventListener('click', handleViewPdf);
+    }
+    
     // Handle page number input (blur and Enter key)
     dom.pageIndicator.addEventListener('blur', handlePageInput);
     dom.pageIndicator.addEventListener('keydown', (e) => {
@@ -80,6 +86,43 @@ const PdfViewerModule = (() => {
     dom.wrapper.addEventListener('mouseup', endSelection);
   }
 
+
+  async function handleViewPdf() {
+    // Get the selected doc_id from the hidden input or window variable
+    const docIdInput = document.getElementById('doc_id');
+    const docId = docIdInput ? docIdInput.value : null;
+    
+    if (!docId) {
+      alert('Please select a document first');
+      return;
+    }
+    
+    await loadPdfByDocId(docId);
+  }
+
+  async function loadPdfByDocId(docId) {
+    try {
+      console.log('Fetching PDF URL for doc_id:', docId);
+      const response = await fetch(`/get_pdf_url?doc_id=${encodeURIComponent(docId)}`);
+      const data = await response.json();
+      
+      if (!response.ok || data.error) {
+        throw new Error(data.error || 'Failed to get PDF URL');
+      }
+      
+      // Extract filename from doc_id for display
+      const fileName = docId.split('/').pop() || docId;
+      
+      // Load the PDF
+      await loadPdf(data.pdf_url, 1, fileName);
+    } catch (error) {
+      console.error('Error loading PDF:', error);
+      dom.container.innerHTML = `<div style="padding:20px; color:red">
+        <h3>Error loading PDF</h3>
+        <p>${error.message}</p>
+      </div>`;
+    }
+  }
 
   async function loadPdf(url, initialPage, label) {
     dom.label.textContent = label || "Document";
@@ -133,6 +176,13 @@ const PdfViewerModule = (() => {
       ctx = canvas.getContext('2d');
     }
 
+    // Compute scale to fit container width
+    const baseViewport = page.getViewport({ scale: 1 });
+    const wrapperWidth = dom.wrapper.clientWidth || baseViewport.width;
+    const maxWidth = Math.max(wrapperWidth - 40, 300); // account for padding
+    const fitScale = maxWidth / baseViewport.width;
+    scale = fitScale > 0 ? fitScale : 1;
+
     const viewport = page.getViewport({ scale: scale });
     canvas.height = viewport.height;
     canvas.width = viewport.width;
@@ -178,6 +228,10 @@ const PdfViewerModule = (() => {
   // --- Snippet Tool Logic ---
 
   function toggleSnippetMode() {
+    if (!pdfDoc) {
+      alert('Load a PDF first using "View PDF" or by asking a question.');
+      return;
+    }
     isSnippetMode = !isSnippetMode;
     if (isSnippetMode) {
       dom.snippetBtn.classList.add('active');

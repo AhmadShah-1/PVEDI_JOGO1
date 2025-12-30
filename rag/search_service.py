@@ -90,7 +90,7 @@ class SearchService:
         # We need to turn this back into: pdfs/AAMA/2021/2603-21_Coatings-Aluminum.pdf
         
         # Assumption: The original file has .pdf extension
-        blob_path = f"pdfs/{doc_id}.pdf"
+        blob_path = f"Codes/{doc_id}.pdf"
         
         print(f"--- DEBUG: Constructing PDF URL ---")
         print(f"Doc ID: {doc_id}")

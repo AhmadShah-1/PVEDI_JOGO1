@@ -25,6 +25,13 @@ const BookmarksModule = (() => {
     // Listeners
     dom.createFolderBtn.addEventListener('click', createFolder);
     
+    // Allow Enter key to create folder
+    dom.newFolderInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        createFolder();
+      }
+    });
+    
     // External Events
     window.addEventListener('rag-meta', (e) => {
       updatePageLinks(e.detail.pages);
@@ -198,23 +205,55 @@ const BookmarksModule = (() => {
     el.className = 'folder-item';
     el.innerHTML = `
       <div class="folder-header">
-        <span>📁 ${folder.name}</span>
-        <span style="font-size:0.8rem">(${folder.children.length})</span>
+        <span class="folder-title">📁 ${folder.name}</span>
+        <span class="folder-count">(${folder.children.length})</span>
+        <div class="folder-actions">
+          <button class="rename-folder-btn" title="Rename Folder">✎</button>
+          <button class="delete-folder-btn" title="Delete Folder">×</button>
+        </div>
       </div>
       <div class="folder-content"></div>
     `;
 
     // Drop Zone
     const header = el.querySelector('.folder-header');
-    header.addEventListener('click', () => {
-      el.querySelector('.folder-content').classList.toggle('open');
+    const titleSpan = el.querySelector('.folder-title');
+    const content = el.querySelector('.folder-content');
+    
+    // Toggle folder open/close when clicking on title
+    titleSpan.addEventListener('click', (e) => {
+      e.stopPropagation();
+      content.classList.toggle('open');
+      console.log(`Folder "${folder.name}" toggled. Open:`, content.classList.contains('open'));
     });
     
-    header.addEventListener('dragover', e => e.preventDefault());
-    header.addEventListener('drop', e => handleDropOnFolder(e, folder.id));
+    // Drag and drop handlers with visual feedback
+    header.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      header.classList.add('drag-over');
+    });
+    
+    header.addEventListener('dragleave', () => {
+      header.classList.remove('drag-over');
+    });
+    
+    header.addEventListener('drop', (e) => {
+      header.classList.remove('drag-over');
+      handleDropOnFolder(e, folder.id);
+    });
+
+    // Folder actions
+    el.querySelector('.rename-folder-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      renameItem(folder.id, null);
+    });
+    
+    el.querySelector('.delete-folder-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteItem(folder.id, null);
+    });
 
     // Render Children
-    const content = el.querySelector('.folder-content');
     folder.children.forEach(child => {
       const childEl = renderSnippet(child, folder.id, false);
       content.appendChild(childEl);

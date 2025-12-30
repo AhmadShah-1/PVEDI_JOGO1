@@ -43,6 +43,7 @@ def index(*, context):
         title=f"Flask Web App Sample v{__version__}",
     )
 
+    
 '''
 def index(*, context=None):
     # 1. Fetch Hierarchy for Dropdowns
@@ -61,12 +62,40 @@ def index(*, context=None):
         title=f"Flask Web App Sample v{__version__}",
         hierarchy=hierarchy # Pass data to template
     )
+
 '''
 
 
 
 
+@app.route("/browse_directory", methods=["GET"])
+def browse_directory():
+    """
+    API endpoint to browse a directory in blob storage.
+    Query param: path (default: "pdfs/")
+    Returns: JSON with folders and files at that path
+    """
+    path = request.args.get('path', 'Codes/')
+    contents = blob_service.list_directory_contents(path)
+    return contents
 
+
+@app.route("/get_pdf_url", methods=["GET"])
+def get_pdf_url():
+    """
+    Get PDF URL for a given doc_id without requiring a question.
+    Query param: doc_id
+    Returns: JSON with pdf_url and doc_id
+    """
+    doc_id = request.args.get('doc_id')
+    if not doc_id:
+        return {'error': 'Missing doc_id'}, 400
+    
+    url = search_service.get_document_url(doc_id)
+    if not url:
+        return {'error': 'Could not generate URL'}, 500
+    
+    return {'pdf_url': url, 'doc_id': doc_id}
 
 
 @app.route("/ask_stream", methods=["POST"])
